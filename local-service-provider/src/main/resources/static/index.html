@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LocalServe - Local Service Provider Platform</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <style>
+        .landing-hero {
+            background: linear-gradient(135deg, #1e3a8a 0%, #7c3aed 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            color: white;
+            padding: 2rem;
+        }
+        .landing-logo { font-size: 3rem; margin-bottom: 1rem; }
+        .landing-title { font-size: 2.5rem; font-weight: 800; margin-bottom: 0.5rem; }
+        .landing-subtitle { font-size: 1.1rem; opacity: 0.85; margin-bottom: 3rem; }
+        .role-cards {
+            display: flex;
+            gap: 2rem;
+            flex-wrap: wrap;
+            justify-content: center;
+            margin-bottom: 2rem;
+        }
+        .role-card {
+            background: rgba(255,255,255,0.12);
+            backdrop-filter: blur(10px);
+            border: 2px solid rgba(255,255,255,0.2);
+            border-radius: 20px;
+            padding: 2.5rem 2rem;
+            width: 220px;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-decoration: none;
+            color: white;
+        }
+        .role-card:hover {
+            background: rgba(255,255,255,0.25);
+            transform: translateY(-8px);
+            border-color: rgba(255,255,255,0.5);
+        }
+        .role-icon { font-size: 3rem; margin-bottom: 1rem; }
+        .role-title { font-size: 1.3rem; font-weight: 700; margin-bottom: 0.5rem; }
+        .role-desc { font-size: 0.85rem; opacity: 0.8; margin-bottom: 1.5rem; }
+        .role-btn {
+            background: white;
+            color: #1e3a8a;
+            padding: 0.6rem 1.5rem;
+            border-radius: 50px;
+            font-weight: 700;
+            font-size: 0.9rem;
+            display: inline-block;
+        }
+        .role-card:hover .role-btn { background: #f0f9ff; }
+    </style>
+</head>
+<body>
+    <div class="landing-hero">
+        <div class="landing-logo">🔧</div>
+        <h1 class="landing-title">LocalServe</h1>
+        <p class="landing-subtitle">Your trusted platform for local service providers</p>
+
+        <div class="role-cards">
+            <a href="/pages/user-login.html" class="role-card">
+                <div class="role-icon">👤</div>
+                <div class="role-title">Customer</div>
+                <div class="role-desc">Book local services, manage your appointments</div>
+                <span class="role-btn">Login as User</span>
+            </a>
+
+            <a href="/pages/provider-login.html" class="role-card">
+                <div class="role-icon">🛠️</div>
+                <div class="role-title">Service Provider</div>
+                <div class="role-desc">Manage your services and bookings</div>
+                <span class="role-btn">Login as Provider</span>
+            </a>
+
+            <a href="/pages/admin-login.html" class="role-card">
+                <div class="role-icon">🛡️</div>
+                <div class="role-title">Administrator</div>
+                <div class="role-desc">Manage platform users and services</div>
+                <span class="role-btn">Login as Admin</span>
+            </a>
+        </div>
+
+        <p style="opacity:0.7; font-size:0.9rem;">New here? <a href="/pages/register.html" style="color:#93c5fd; font-weight:600;">Create an account</a></p>
+    </div>
+</body>
+</html>

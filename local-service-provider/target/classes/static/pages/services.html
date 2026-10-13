@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Services - LocalServe</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-brand">🔧 LocalServe</div>
+        <div class="nav-links">
+            <a href="/">Home</a>
+            <span id="authLinks"></span>
+        </div>
+    </nav>
+
+    <div class="page-container">
+        <div class="page-header">
+            <h1>Browse Services</h1>
+            <div class="filter-bar">
+                <input type="text" id="searchInput" placeholder="Search services..." oninput="handleSearch()">
+                <select id="categoryFilter" onchange="handleFilter()">
+                    <option value="">All Categories</option>
+                    <option>Plumbing</option>
+                    <option>Electrical</option>
+                    <option>Cleaning</option>
+                    <option>Carpentry</option>
+                    <option>Painting</option>
+                    <option>Gardening</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="services-grid" id="servicesGrid">
+            <p class="loading">Loading services...</p>
+        </div>
+    </div>
+
+    <!-- Booking Modal -->
+    <div id="bookingModal" class="modal" style="display:none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Book Service</h3>
+                <span class="close" onclick="closeModal()">&times;</span>
+            </div>
+            <div id="bookingServiceInfo" class="booking-service-info"></div>
+            <form id="bookingForm">
+                <div class="form-group">
+                    <label>Preferred Date & Time</label>
+                    <input type="datetime-local" id="bookingDate" required>
+                </div>
+                <div class="form-group">
+                    <label>Notes (optional)</label>
+                    <textarea id="bookingNotes" rows="3" placeholder="Any special requirements..."></textarea>
+                </div>
+                <input type="hidden" id="bookingServiceId">
+                <button type="submit" class="btn btn-primary btn-full">Confirm Booking</button>
+            </form>
+        </div>
+    </div>
+
+    <script src="/js/api.js"></script>
+    <script>
+        const token = localStorage.getItem('token');
+        const role = localStorage.getItem('role');
+
+        document.getElementById('authLinks').innerHTML = token
+            ? `<a href="/${role === 'PROVIDER' ? 'pages/provider-dashboard' : 'pages/user-dashboard'}.html">Dashboard</a>
+               <button class="btn btn-outline" onclick="logout()">Logout</button>`
+            : `<a href="/pages/login.html" class="btn btn-outline">Login</a>
+               <a href="/pages/register.html" class="btn btn-primary">Register</a>`;
+
+        async function loadServices(url = '/api/services') {
+            const services = await API.get(url);
+            renderServices(services);
+        }
+
+        function handleSearch() {
+            const name = document.getElementById('searchInput').value;
+            const cat = document.getElementById('categoryFilter').value;
+            if (name) loadServices(`/api/services/search?name=${name}`);
+            else if (cat) loadServices(`/api/services/category/${cat}`);
+            else loadServices();
+        }
+
+        function handleFilter() {
+            const cat = document.getElementById('categoryFilter').value;
+            if (cat) loadServices(`/api/services/category/${cat}`);
+            else loadServices();
+        }
+
+        function renderServices(services) {
+            const grid = document.getElementById('servicesGrid');
+            if (!services || services.length === 0) {
+                grid.innerHTML = '<p class="empty">No services found.</p>';
+                return;
+            }
+            grid.innerHTML = services.map(s => `
+                <div class="service-card">
+                    <div class="service-category">${s.category}</div>
+                    <h3>${s.name}</h3>
+                    <p>${s.description || ''}</p>
+                    <p class="provider-name">By: ${s.provider.name}</p>
+                    <div class="service-meta">
+                        <span class="price">₹${s.price}</span>
+                        <span class="location">📍 ${s.location || 'N/A'}</span>
+                    </div>
+                    <button class="btn btn-primary" onclick="openBooking(${s.id}, '${s.name}', ${s.price})">Book Now</button>
+                </div>
+            `).join('');
+        }
+
+        function openBooking(id, name, price) {
+            if (!token) { window.location.href = '/pages/login.html'; return; }
+            if (role !== 'USER') { alert('Only customers can book services.'); return; }
+            document.getElementById('bookingServiceId').value = id;
+            document.getElementById('bookingServiceInfo').innerHTML = `<p><strong>${name}</strong> - ₹${price}</p>`;
+            document.getElementById('bookingModal').style.display = 'flex';
+        }
+
+        function closeModal() {
+            document.getElementById('bookingModal').style.display = 'none';
+        }
+
+        document.getElementById('bookingForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const data = {
+                serviceId: parseInt(document.getElementById('bookingServiceId').value),
+                bookingDate: document.getElementById('bookingDate').value,
+                notes: document.getElementById('bookingNotes').value
+            };
+            try {
+                await API.authPost('/api/user/bookings', data);
+                closeModal();
+                alert('Booking confirmed! Check your dashboard.');
+                window.location.href = '/pages/user-dashboard.html';
+            } catch (err) {
+                alert('Booking failed. Please try again.');
+            }
+        });
+
+        function logout() { localStorage.clear(); window.location.href = '/'; }
+
+        loadServices();
+    </script>
+</body>
+</html>

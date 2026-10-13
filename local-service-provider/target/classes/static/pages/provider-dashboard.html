@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Provider Dashboard - LocalServe</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-brand">🔧 LocalServe</div>
+        <div class="nav-links">
+            <span class="nav-user">🛠️ <span id="userName"></span></span>
+            <button class="btn btn-outline" onclick="logout()">Logout</button>
+        </div>
+    </nav>
+
+    <div class="dashboard">
+        <div class="dashboard-header">
+            <h1>Provider Dashboard</h1>
+        </div>
+
+        <div class="stats-row" id="statsRow">
+            <div class="stat-card"><div class="stat-num" id="totalServices">-</div><div>My Services</div></div>
+            <div class="stat-card"><div class="stat-num" id="pendingCount">-</div><div>Pending Bookings</div></div>
+            <div class="stat-card"><div class="stat-num" id="totalBookings">-</div><div>Total Bookings</div></div>
+        </div>
+
+        <div class="tabs">
+            <button class="tab active" onclick="showTab('services')">My Services</button>
+            <button class="tab" onclick="showTab('bookings')">Booking Requests</button>
+        </div>
+
+        <div id="services" class="tab-content active">
+            <div class="section-header">
+                <h3>My Services</h3>
+                <button class="btn btn-primary" onclick="openServiceModal()">+ Add Service</button>
+            </div>
+            <div id="servicesList" class="services-grid">
+                <p class="loading">Loading...</p>
+            </div>
+        </div>
+
+        <div id="bookings" class="tab-content">
+            <h3>Booking Requests</h3>
+            <div id="bookingsList" class="bookings-list">
+                <p class="loading">Loading...</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Service Modal -->
+    <div id="serviceModal" class="modal" style="display:none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="modalTitle">Add New Service</h3>
+                <span class="close" onclick="closeModal()">&times;</span>
+            </div>
+            <form id="serviceForm">
+                <div class="form-group">
+                    <label>Service Name</label>
+                    <input type="text" id="svcName" required>
+                </div>
+                <div class="form-group">
+                    <label>Description</label>
+                    <textarea id="svcDesc" rows="3"></textarea>
+                </div>
+                <div class="form-group">
+                    <label>Category</label>
+                    <select id="svcCategory">
+                        <option>Plumbing</option>
+                        <option>Electrical</option>
+                        <option>Cleaning</option>
+                        <option>Carpentry</option>
+                        <option>Painting</option>
+                        <option>Gardening</option>
+                        <option>Other</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Price (₹)</label>
+                    <input type="number" id="svcPrice" required>
+                </div>
+                <div class="form-group">
+                    <label>Location</label>
+                    <input type="text" id="svcLocation">
+                </div>
+                <input type="hidden" id="editServiceId">
+                <button type="submit" class="btn btn-primary btn-full">Save Service</button>
+            </form>
+        </div>
+    </div>
+
+    <script src="/js/api.js"></script>
+    <script src="/js/auth-guard.js"></script>
+    <script>
+        document.getElementById('userName').textContent = localStorage.getItem('name');
+
+        async function loadServices() {
+            const services = await API.authGet('/api/provider/services');
+            document.getElementById('totalServices').textContent = services.length;
+            const list = document.getElementById('servicesList');
+            if (!services.length) {
+                list.innerHTML = '<p class="empty">No services yet. Add your first service!</p>';
+                return;
+            }
+            list.innerHTML = services.map(s => `
+                <div class="service-card">
+                    <div class="service-category">${s.category}</div>
+                    <h3>${s.name}</h3>
+                    <p>${s.description || ''}</p>
+                    <div class="service-meta">
+                        <span class="price">₹${s.price}</span>
+                        <span class="location">📍 ${s.location || 'N/A'}</span>
+                    </div>
+                    <div class="card-actions">
+                        <button class="btn btn-sm btn-outline" onclick="editService(${s.id}, '${s.name}', '${s.description || ''}', '${s.category}', ${s.price}, '${s.location || ''}')">Edit</button>
+                        <button class="btn btn-sm btn-danger" onclick="deleteService(${s.id})">Delete</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        async function loadBookings() {
+            const bookings = await API.authGet('/api/provider/bookings');
+            const pending = bookings.filter(b => b.status === 'PENDING').length;
+            document.getElementById('pendingCount').textContent = pending;
+            document.getElementById('totalBookings').textContent = bookings.length;
+
+            const list = document.getElementById('bookingsList');
+            if (!bookings.length) {
+                list.innerHTML = '<p class="empty">No booking requests yet.</p>';
+                return;
+            }
+            list.innerHTML = bookings.map(b => `
+                <div class="booking-card status-${b.status.toLowerCase()}">
+                    <div class="booking-info">
+                        <h4>${b.service.name}</h4>
+                        <p>Customer: ${b.user.name} (${b.user.phone || 'N/A'})</p>
+                        <p>Date: ${new Date(b.bookingDate).toLocaleDateString()}</p>
+                        <p>Notes: ${b.notes || 'None'}</p>
+                    </div>
+                    <div class="booking-status">
+                        <span class="badge badge-${b.status.toLowerCase()}">${b.status}</span>
+                        ${b.status === 'PENDING' ? `
+                        <button class="btn btn-sm btn-success" onclick="updateStatus(${b.id}, 'ACCEPTED')">Accept</button>
+                        <button class="btn btn-sm btn-danger" onclick="updateStatus(${b.id}, 'REJECTED')">Reject</button>` : ''}
+                        ${b.status === 'ACCEPTED' ? `
+                        <button class="btn btn-sm btn-primary" onclick="updateStatus(${b.id}, 'COMPLETED')">Mark Complete</button>` : ''}
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        async function updateStatus(id, status) {
+            await API.authPut(`/api/bookings/${id}/status`, { status });
+            loadBookings();
+        }
+
+        async function deleteService(id) {
+            if (!confirm('Delete this service?')) return;
+            await API.authDelete(`/api/provider/services/${id}`);
+            loadServices();
+        }
+
+        function openServiceModal() {
+            document.getElementById('modalTitle').textContent = 'Add New Service';
+            document.getElementById('serviceForm').reset();
+            document.getElementById('editServiceId').value = '';
+            document.getElementById('serviceModal').style.display = 'flex';
+        }
+
+        function editService(id, name, desc, cat, price, loc) {
+            document.getElementById('modalTitle').textContent = 'Edit Service';
+            document.getElementById('svcName').value = name;
+            document.getElementById('svcDesc').value = desc;
+            document.getElementById('svcCategory').value = cat;
+            document.getElementById('svcPrice').value = price;
+            document.getElementById('svcLocation').value = loc;
+            document.getElementById('editServiceId').value = id;
+            document.getElementById('serviceModal').style.display = 'flex';
+        }
+
+        function closeModal() {
+            document.getElementById('serviceModal').style.display = 'none';
+        }
+
+        document.getElementById('serviceForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const data = {
+                name: document.getElementById('svcName').value,
+                description: document.getElementById('svcDesc').value,
+                category: document.getElementById('svcCategory').value,
+                price: parseFloat(document.getElementById('svcPrice').value),
+                location: document.getElementById('svcLocation').value
+            };
+            const editId = document.getElementById('editServiceId').value;
+            if (editId) {
+                await API.authPut(`/api/provider/services/${editId}`, data);
+            } else {
+                await API.authPost('/api/provider/services', data);
+            }
+            closeModal();
+            loadServices();
+        });
+
+        function showTab(tab) {
+            document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.getElementById(tab).classList.add('active');
+            event.target.classList.add('active');
+        }
+
+        function logout() { localStorage.clear(); window.location.href = '/'; }
+
+        loadServices();
+        loadBookings();
+    </script>
+</body>
+</html>

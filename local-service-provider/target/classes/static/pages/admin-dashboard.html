@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard - LocalServe</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-brand">🔧 LocalServe Admin</div>
+        <div class="nav-links">
+            <span class="nav-user">🛡️ Admin</span>
+            <button class="btn btn-outline" onclick="logout()">Logout</button>
+        </div>
+    </nav>
+
+    <div class="dashboard">
+        <div class="dashboard-header">
+            <h1>Admin Dashboard</h1>
+        </div>
+
+        <div class="stats-row">
+            <div class="stat-card blue"><div class="stat-num" id="totalUsers">-</div><div>Total Users</div></div>
+            <div class="stat-card green"><div class="stat-num" id="totalProviders">-</div><div>Providers</div></div>
+            <div class="stat-card orange"><div class="stat-num" id="totalServices">-</div><div>Services</div></div>
+            <div class="stat-card purple"><div class="stat-num" id="totalBookings">-</div><div>Bookings</div></div>
+            <div class="stat-card red"><div class="stat-num" id="pendingBookings">-</div><div>Pending</div></div>
+        </div>
+
+        <div class="tabs">
+            <button class="tab active" onclick="showTab('users')">Users</button>
+            <button class="tab" onclick="showTab('providers')">Providers</button>
+            <button class="tab" onclick="showTab('bookings')">All Bookings</button>
+        </div>
+
+        <div id="users" class="tab-content active">
+            <h3>Registered Users</h3>
+            <div id="usersList" class="table-container">
+                <p class="loading">Loading...</p>
+            </div>
+        </div>
+
+        <div id="providers" class="tab-content">
+            <h3>Service Providers</h3>
+            <div id="providersList" class="table-container">
+                <p class="loading">Loading...</p>
+            </div>
+        </div>
+
+        <div id="bookings" class="tab-content">
+            <h3>All Bookings</h3>
+            <div id="bookingsList" class="table-container">
+                <p class="loading">Loading...</p>
+            </div>
+        </div>
+    </div>
+
+    <script src="/js/api.js"></script>
+    <script src="/js/auth-guard.js"></script>
+    <script>
+        async function loadDashboard() {
+            const stats = await API.authGet('/api/admin/dashboard');
+            document.getElementById('totalUsers').textContent = stats.totalUsers;
+            document.getElementById('totalProviders').textContent = stats.totalProviders;
+            document.getElementById('totalServices').textContent = stats.totalServices;
+            document.getElementById('totalBookings').textContent = stats.totalBookings;
+            document.getElementById('pendingBookings').textContent = stats.pendingBookings;
+        }
+
+        async function loadUsers() {
+            const users = await API.authGet('/api/admin/users');
+            const container = document.getElementById('usersList');
+            if (!users.length) { container.innerHTML = '<p class="empty">No users found.</p>'; return; }
+            container.innerHTML = `
+                <table class="data-table">
+                    <thead><tr><th>ID</th><th>Name</th><th>Email</th><th>Phone</th><th>Status</th><th>Actions</th></tr></thead>
+                    <tbody>${users.map(u => `
+                        <tr>
+                            <td>${u.id}</td>
+                            <td>${u.name}</td>
+                            <td>${u.email}</td>
+                            <td>${u.phone || 'N/A'}</td>
+                            <td><span class="badge ${u.active ? 'badge-accepted' : 'badge-rejected'}">${u.active ? 'Active' : 'Inactive'}</span></td>
+                            <td>
+                                <button class="btn btn-sm btn-outline" onclick="toggleUser(${u.id})">${u.active ? 'Deactivate' : 'Activate'}</button>
+                                <button class="btn btn-sm btn-danger" onclick="deleteUser(${u.id})">Delete</button>
+                            </td>
+                        </tr>`).join('')}
+                    </tbody>
+                </table>`;
+        }
+
+        async function loadProviders() {
+            const providers = await API.authGet('/api/admin/providers');
+            const container = document.getElementById('providersList');
+            if (!providers.length) { container.innerHTML = '<p class="empty">No providers found.</p>'; return; }
+            container.innerHTML = `
+                <table class="data-table">
+                    <thead><tr><th>ID</th><th>Name</th><th>Email</th><th>Phone</th><th>Address</th><th>Status</th><th>Actions</th></tr></thead>
+                    <tbody>${providers.map(p => `
+                        <tr>
+                            <td>${p.id}</td>
+                            <td>${p.name}</td>
+                            <td>${p.email}</td>
+                            <td>${p.phone || 'N/A'}</td>
+                            <td>${p.address || 'N/A'}</td>
+                            <td><span class="badge ${p.active ? 'badge-accepted' : 'badge-rejected'}">${p.active ? 'Active' : 'Inactive'}</span></td>
+                            <td>
+                                <button class="btn btn-sm btn-outline" onclick="toggleUser(${p.id})">${p.active ? 'Deactivate' : 'Activate'}</button>
+                                <button class="btn btn-sm btn-danger" onclick="deleteUser(${p.id})">Delete</button>
+                            </td>
+                        </tr>`).join('')}
+                    </tbody>
+                </table>`;
+        }
+
+        async function loadBookings() {
+            const bookings = await API.authGet('/api/admin/bookings');
+            const container = document.getElementById('bookingsList');
+            if (!bookings.length) { container.innerHTML = '<p class="empty">No bookings found.</p>'; return; }
+            container.innerHTML = `
+                <table class="data-table">
+                    <thead><tr><th>ID</th><th>Customer</th><th>Service</th><th>Provider</th><th>Date</th><th>Status</th></tr></thead>
+                    <tbody>${bookings.map(b => `
+                        <tr>
+                            <td>${b.id}</td>
+                            <td>${b.user.name}</td>
+                            <td>${b.service.name}</td>
+                            <td>${b.service.provider.name}</td>
+                            <td>${new Date(b.bookingDate).toLocaleDateString()}</td>
+                            <td><span class="badge badge-${b.status.toLowerCase()}">${b.status}</span></td>
+                        </tr>`).join('')}
+                    </tbody>
+                </table>`;
+        }
+
+        async function toggleUser(id) {
+            await API.authPut(`/api/admin/users/${id}/toggle`, {});
+            loadUsers();
+            loadProviders();
+            loadDashboard();
+        }
+
+        async function deleteUser(id) {
+            if (!confirm('Delete this user permanently?')) return;
+            await API.authDelete(`/api/admin/users/${id}`);
+            loadUsers();
+            loadProviders();
+            loadDashboard();
+        }
+
+        function showTab(tab) {
+            document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.getElementById(tab).classList.add('active');
+            event.target.classList.add('active');
+            if (tab === 'users') loadUsers();
+            else if (tab === 'providers') loadProviders();
+            else if (tab === 'bookings') loadBookings();
+        }
+
+        function logout() { localStorage.clear(); window.location.href = '/'; }
+
+        loadDashboard();
+        loadUsers();
+    </script>
+</body>
+</html>
